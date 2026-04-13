@@ -14,12 +14,13 @@ import {
   MOCK_LOGS, 
   MOCK_APPS 
 } from './constants';
-import { UserProfile, TodoItem, NewsItem, ScheduleItem, AuditLog, AppConfig } from './types';
+import { UserProfile, TodoItem, NewsItem, ScheduleItem, AuditLog, AppConfig, UserRole } from './types';
 import UserCard from './components/UserCard';
 import TodoList from './components/TodoList';
 import NewsCenter from './components/NewsCenter';
 import Schedule from './components/Schedule';
 import AdminPanel from './components/AdminPanel';
+import LoginPage from './components/LoginPage';
 import { LayoutDashboard, ShieldCheck, Bell, LogOut, Menu, X, MessageSquare, Mail, FileText, Users, Settings } from 'lucide-react';
 
 // Update mock data to match image
@@ -35,6 +36,7 @@ const IMAGE_USER: UserProfile = {
 
 export default function App() {
   // State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile>(IMAGE_USER);
   const [view, setView] = useState<'user' | 'admin'>('user');
   const [todos, setTodos] = useState<TodoItem[]>(MOCK_TODOS);
@@ -44,6 +46,27 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Actions
+  const handleLogin = (role: UserRole) => {
+    if (role === 'admin') {
+      setView('admin');
+      setCurrentUser({ ...MOCK_TEACHER, name: '管理员', role: 'admin' });
+    } else if (role === 'teacher') {
+      setView('user');
+      setCurrentUser(MOCK_TEACHER);
+    } else {
+      setView('user');
+      setCurrentUser(IMAGE_USER);
+    }
+    setIsLoggedIn(true);
+    addLog(`用户登录，角色：${role}`);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setView('user');
+    addLog('用户退出登录');
+  };
+
   const handleSwitchRole = () => {
     const newUser = currentUser.role === 'student' ? MOCK_TEACHER : IMAGE_USER;
     setCurrentUser(newUser);
@@ -72,7 +95,7 @@ export default function App() {
   const addLog = (content: string) => {
     const newLog: AuditLog = {
       id: Date.now().toString(),
-      operator: '当前用户',
+      operator: currentUser?.name || '系统',
       time: new Date().toLocaleString(),
       content,
       result: 'success'
@@ -80,55 +103,84 @@ export default function App() {
     setLogs(prev => [newLog, ...prev]);
   };
 
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans pb-20">
-      {/* Sidebar (Admin Only) */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-full flex flex-col">
-          <div className="p-6 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-              <LayoutDashboard className="w-6 h-6 text-white" />
+    <div className={`min-h-screen flex flex-col bg-slate-50 font-sans ${view === 'user' ? 'pb-20' : ''}`}>
+      {/* Sidebar (Admin Only View) */}
+      {view === 'admin' && (
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="h-full flex flex-col">
+            <div className="p-6 flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                <LayoutDashboard className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">高校管理后台</h1>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">高校工作台</h1>
-          </div>
 
-          <nav className="flex-1 px-4 space-y-1">
-            <SidebarItem 
-              icon={<LayoutDashboard className="w-5 h-5" />} 
-              label="师生工作台" 
-              active={view === 'user'} 
-              onClick={() => { setView('user'); setIsSidebarOpen(false); }} 
-            />
-            <SidebarItem 
-              icon={<ShieldCheck className="w-5 h-5" />} 
-              label="管理后台" 
-              active={view === 'admin'} 
-              onClick={() => { setView('admin'); setIsSidebarOpen(false); }} 
-            />
-          </nav>
+            <nav className="flex-1 px-4 space-y-1">
+              <SidebarItem 
+                icon={<ShieldCheck className="w-5 h-5" />} 
+                label="管理概览" 
+                active={true} 
+                onClick={() => {}} 
+              />
+              <SidebarItem 
+                icon={<LayoutDashboard className="w-5 h-5" />} 
+                label="返回工作台" 
+                active={false} 
+                onClick={() => setView('user')} 
+              />
+            </nav>
 
-          <div className="p-4 border-t border-slate-50">
-            <button className="flex items-center gap-3 w-full px-4 py-3 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all font-medium">
-              <LogOut className="w-5 h-5" />
-              退出登录
-            </button>
+            <div className="p-4 border-t border-slate-50">
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-4 py-3 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all font-medium"
+              >
+                <LogOut className="w-5 h-5" />
+                退出登录
+              </button>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       {/* Main Content */}
-      <main className={`flex-1 ${view === 'admin' ? 'lg:ml-64' : ''} flex flex-col min-w-0`}>
+      <main className={`flex-1 ${view === 'admin' ? 'lg:ml-64' : 'max-w-md mx-auto w-full bg-white shadow-2xl min-h-screen relative'} flex flex-col min-w-0`}>
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
-          <div className="w-10" /> {/* Spacer */}
+          {view === 'admin' ? (
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <Menu className="w-6 h-6 text-slate-600" />
+            </button>
+          ) : (
+            <div className="w-10" />
+          )}
           <h2 className="text-lg font-medium text-slate-800">工作台</h2>
-          <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <Settings className="w-5 h-5 text-slate-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            {view === 'user' && currentUser.role === 'admin' && (
+              <button 
+                onClick={() => setView('admin')}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-blue-600"
+                title="进入后台"
+              >
+                <ShieldCheck className="w-5 h-5" />
+              </button>
+            )}
+            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+              <Settings className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-x-hidden">
           <AnimatePresence mode="wait">
             {view === 'user' ? (
               <motion.div 
@@ -148,7 +200,7 @@ export default function App() {
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex flex-col justify-end p-6">
-                      <h3 className="text-white font-bold text-lg">南邮连续六年获</h3>
+                      <h3 className="text-white font-bold text-lg">南工连续六年获</h3>
                       <p className="text-white/90 text-sm">全省高质量发展综合考核第一等次</p>
                     </div>
                   </div>
@@ -167,18 +219,17 @@ export default function App() {
                       onMarkRead={handleMarkNewsRead} 
                     />
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <TodoList 
-                        todos={todos} 
-                        onToggle={handleToggleTodo} 
-                        onDelete={handleDeleteTodo} 
-                      />
-                      <Schedule 
-                        schedule={MOCK_SCHEDULE} 
-                        role={currentUser.role} 
-                        onAddEvent={() => alert('日程添加功能开发中...')} 
-                      />
-                    </div>
+                    <TodoList 
+                      todos={todos} 
+                      onToggle={handleToggleTodo} 
+                      onDelete={handleDeleteTodo} 
+                    />
+                    
+                    <Schedule 
+                      schedule={MOCK_SCHEDULE} 
+                      role={currentUser.role} 
+                      onAddEvent={() => alert('日程添加功能开发中...')} 
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -203,7 +254,7 @@ export default function App() {
 
       {/* Bottom Navigation (User Only) */}
       {view === 'user' && (
-        <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex items-center justify-around py-2 px-4 z-50">
+        <nav className="fixed bottom-0 inset-x-0 lg:max-w-md lg:mx-auto bg-white border-t border-slate-100 flex items-center justify-around py-2 px-4 z-50">
           <BottomNavItem icon={<MessageSquare className="w-6 h-6" />} label="消息" badge="99+" />
           <BottomNavItem icon={<Mail className="w-6 h-6" />} label="邮件" badge="94" />
           <BottomNavItem icon={<FileText className="w-6 h-6" />} label="文档" />
@@ -212,8 +263,8 @@ export default function App() {
         </nav>
       )}
 
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
+      {/* Mobile Overlay (Admin Only) */}
+      {view === 'admin' && isSidebarOpen && (
         <div 
           className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm lg:hidden"
           onClick={() => setIsSidebarOpen(false)}

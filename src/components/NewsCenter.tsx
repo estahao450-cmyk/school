@@ -23,7 +23,7 @@ export default function NewsCenter({ news, onMarkRead }: NewsCenterProps) {
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
   const tabs: { id: NewsItem['type'] | 'all', label: string }[] = [
-    { id: 'headline', label: '南邮新闻' },
+    { id: 'headline', label: '南工新闻' },
     { id: 'notice', label: '通知公告' },
   ];
 
